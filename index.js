@@ -19,76 +19,104 @@ client.on('ready', () => {
     console.log('WhatsApp Client is ready!');
 });
 
+const userState = {};
+
 client.on('message_create', async (msg) => {
     const text = (msg.body || '').trim();
-    if (!text.startsWith('/') && !text.startsWith('.')) return;
+    if (text === '') return;
 
-    console.log(`Command received: ${text} from ${msg.from}`);
+    const from = msg.from;
+    const parts = text.split(/\s+/);
+    let command = parts[0].toLowerCase();
+    let args = parts.slice(1).join(' ');
 
-    const parts = text.split(' ');
-    const command = parts[0].toLowerCase().substring(1);
-    const args = parts.slice(1).join(' ');
+    // Remove prefix if exists
+    if (command.startsWith('/') || command.startsWith('.')) {
+        command = command.substring(1);
+    }
 
-    const services = ['status', 'history', 'sf', 'digi', 'bc', 'tipe'];
-    
-    // Alias .cek to status
-    let activeService = command === 'cek' ? 'status' : command;
+    // Map short aliases
+    const commandMap = {
+        's': 'status',
+        'h': 'history',
+        'sf': 'sf',
+        'digi': 'digi',
+        'bc': 'bc',
+        't': 'tipe',
+        'status': 'status',
+        'history': 'history',
+        'tipe': 'tipe'
+    };
 
-    if (services.includes(activeService)) {
+    const isImei = /^\d{15}$/.test(text);
+
+    if (isImei) {
+        userState[from] = text;
+        console.log(`IMEI saved for ${from}: ${text}`);
+        msg.reply('✅ IMEI telah disimpan. Silakan kirim perintah: *s, h, sf, digi, bc, t*');
+        return;
+    }
+
+    const activeService = commandMap[command];
+
+    if (activeService) {
+        // If no args but we have a saved IMEI, use it
+        if (!args && userState[from]) {
+            args = userState[from];
+        }
+
         if (!args) {
-            msg.reply(`Silakan sertakan IMEI. Contoh: /${command} 123456789012345`);
+            msg.reply(`Silakan sertakan IMEI atau kirim IMEI terlebih dahulu. Contoh: *s 123456789012345* atau kirim IMEI-nya saja.`);
             return;
         }
 
-        msg.reply(`Sedang memproses permintaan ${activeService.toUpperCase()}...`);
+        console.log(`Processing ${activeService.toUpperCase()} for ${from} with IMEI: ${args}`);
+        msg.reply(`🚀 1 IMEI *${activeService.toUpperCase()}* sedang dicek, mohon ditunggu bosku 🙏`);
 
         const result = await callCeirApi(activeService, args);
 
         if (result.status === 'success') {
-            let responseMsg = `✅ *${result.service_code} SUCCESS*\n`;
-            responseMsg += `Total IMEI: ${result.total_imei}\n`;
+            let responseMsg = '';
             
-            if (activeService === 'history') {
-                for (const [imei, history] of Object.entries(result.results)) {
+            for (const [imei, val] of Object.entries(result.results)) {
+                if (activeService === 'history') {
                     responseMsg += `\n*IMEI: ${imei}*\n`;
-                    if (Array.isArray(history)) {
-                        history.forEach(item => {
+                    if (Array.isArray(val)) {
+                        val.forEach(item => {
                             responseMsg += `- [${item.date}] ${item.status}: ${item.note}\n`;
                         });
                     } else {
-                        responseMsg += `- ${history}\n`;
+                        responseMsg += `- ${val}\n`;
                     }
-                }
-            } else if (activeService === 'tipe') {
-                for (const [imei, detail] of Object.entries(result.results)) {
-                    responseMsg += `\n*IMEI: ${imei}*\n`;
-                    if (detail.ok) {
-                        responseMsg += `- Brand: ${detail.brand}\n`;
-                        responseMsg += `- Tipe: ${detail.tipe}\n`;
+                } else if (activeService === 'tipe') {
+                    if (val.ok) {
+                        responseMsg += `✅ *${val.brand} ${val.tipe}* (${imei})\n`;
                     } else {
-                        responseMsg += `- Tidak ditemukan\n`;
+                        responseMsg += `❌ *Tidak Ditemukan* (${imei})\n`;
                     }
-                }
-            } else {
-                for (const [imei, status] of Object.entries(result.results)) {
-                    responseMsg += `- ${imei}: ${status}\n`;
+                } else {
+                    responseMsg += `${val} ${imei}\n`;
                 }
             }
 
-            msg.reply(responseMsg);
+            responseMsg += `\n📅 Tanggal: *${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}*`;
+            // Note: Balance is not available via API, so we skip it or use a placeholder
+            // responseMsg += `\n💰 Sisa saldo: Cek di /api saldo`;
+
+            msg.reply(responseMsg.trim());
         } else {
             msg.reply(`❌ *ERROR*: ${result.error_code || 'UNKNOWN_ERROR'}`);
         }
     } else if (command === 'help' || command === 'start') {
         const helpMsg = `📘 *CEIR API BOT HELP*\n\n` +
             `Gunakan perintah berikut:\n` +
-            `• /status [imei] - Cek status IMEI\n` +
-            `• /history [imei] - Cek riwayat IMEI\n` +
-            `• /sf [imei] - Analisa SF\n` +
-            `• /digi [imei] - Analisa Digi/Whitelist\n` +
-            `• /bc [imei] - Bea Cukai / Check Auto\n` +
-            `• /tipe [imei] - Cek merk & tipe device\n\n` +
-            `*Catatan*: Anda bisa memasukkan hingga 50 IMEI sekaligus dipisahkan koma atau spasi.`;
+            `• *s [imei]* - Cek status IMEI\n` +
+            `• *h [imei]* - Cek riwayat IMEI\n` +
+            `• *sf [imei]* - Analisa SF\n` +
+            `• *digi [imei]* - Analisa Digi/Whitelist\n` +
+            `• *bc [imei]* - Bea Cukai / Check Auto\n` +
+            `• *t [imei]* - Cek merk & tipe device\n\n` +
+            `*Tips*: Anda bisa mengirim IMEI-nya saja terlebih dahulu, lalu kirim perintahnya (s, h, dll).`;
         msg.reply(helpMsg);
     }
 });

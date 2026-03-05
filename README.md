@@ -34,15 +34,24 @@ Bot WhatsApp sederhana menggunakan Node.js untuk melakukan pengecekan status IME
 
 ## Perintah Tersedia
 
-Kirim pesan berikut ke nomor WhatsApp bot:
+Bot ini mendukung dua cara pengecekan:
 
-- `.cek [imei]` - Cek status IMEI.
-- `/status [imei]` - Alias untuk cek status.
-- `/history [imei]` - Cek riwayat IMEI.
-- `/tipe [imei]` - Cek merk dan tipe device.
-- `/help` - Menampilkan bantuan.
+### 1. Cara Langsung (Satu Pesan)
 
-_Catatan: Anda bisa memasukkan hingga 50 IMEI sekaligus dengan memisahkan menggunakan koma, spasi, atau baris baru._
+Kirim perintah diikuti IMEI:
+
+- `s [imei]` - Cek status IMEI.
+- `h [imei]` - Cek riwayat IMEI.
+- `t [imei]` - Cek merk dan tipe device.
+- `sf [imei]`, `digi [imei]`, `bc [imei]` - Layanan lainnya.
+
+### 2. Cara Bertahap (Seperti AirBot)
+
+1.  Kirim IMEI-nya saja (15 digit).
+2.  Bot akan membalas "IMEI telah disimpan".
+3.  Kirim perintahnya saja (`s`, `h`, `sf`, `digi`, `bc`, atau `t`).
+
+_Tips: Gunakan `/help` untuk melihat bantuan lengkap._
 
 ## Lisensi
 
