@@ -32,6 +32,17 @@ Bot WhatsApp sederhana menggunakan Node.js untuk melakukan pengecekan status IME
     ```
 2.  Scan QR code yang muncul di terminal menggunakan aplikasi WhatsApp Anda (Linked Devices).
 
+## Cara Reset Sesi (Ganti Nomor WhatsApp)
+
+Jika Anda ingin mengganti nomor WhatsApp yang terhubung:
+
+1.  Hentikan program (Ctrl + C).
+2.  Hapus folder `.wwebjs_auth`:
+    ```bash
+    rm -rf .wwebjs_auth
+    ```
+3.  Jalankan kembali `npm start` dan scan QR dengan nomor baru.
+
 ## Perintah Tersedia
 
 Bot ini mendukung dua cara pengecekan:
